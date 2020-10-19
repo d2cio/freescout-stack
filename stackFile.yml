@@ -1,0 +1,57 @@
+version: '1.0'
+services:
+  - name: db
+    type: mariadb
+    version: 10.4
+    configuration: StandAlone
+    database: freescout
+    username: freescout
+    userPassword: null
+    password: null
+    ports:
+      - 3306
+    remoteAccess: false
+    deployTo:
+      - freescout
+
+  - name: freescout
+    type: docker
+    image: tiredofit/freescout
+    version: latest
+    ports:
+      - 80
+    remoteAccess: false
+    env:
+      DB_HOST: "{{=service('db').getMasterAlias()}}"
+      DB_NAME: "{{=service('db').get('database')}}"
+      DB_USER: "{{=service('db').get('username')}}"
+      DB_PASS: "{{=service('db').get('userPassword')}}"
+      ADMIN_EMAIL: null
+      ADMIN_PASS: null
+      ENABLE_SSL_PROXY: "FALSE"
+      DISPLAY_ERRORS: "FALSE"
+      SITE_URL: http://{{=service('freescout').getNginxDomain()}}/
+    volumes:
+      - directory: /www/html
+      - directory: /data
+      - directory: /www/logs
+    deployTo:
+      - freescout
+
+  - name: web
+    type: nginx
+    version: 1.19
+    ports:
+      - 80
+      - 443
+    remoteAccess: true
+    serviceFiles:
+      - name: freescout
+    deployTo:
+      - freescout
+
+hosts:
+  - name: freescout
+    requirements:
+      cores: 1
+      memory: 1
